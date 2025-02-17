@@ -230,7 +230,7 @@
                 <div class="answer-line">
                     <span class="problem">${questionNum}. ${q.a.toFixed(2)}<sup>${q.b.toFixed(2)}</sup>=${userAns}</span>
                     <span>答案：${q.ans.toFixed(3)}</span>
-                    <span style="color:${score.toFixed(3) == 1.000 ? '#FAFA99' : (accuracy >= 0.9 ? '#2e7d32' : '#c62828')}">准确率：${(accuracy * 100).toFixed(1)}%</span>
+                    <span style="color:${score.toFixed(3) == 1.000 ? '#1f1e33' : (accuracy >= 0.9 ? '#2e7d32' : '#c62828')}">准确率：${(accuracy * 100).toFixed(1)}%</span>
                     ${score ? `<span>得分：${score.toFixed(3)}</span>` : ''}
                     ${timeUsed ? `<span style="color:#666">耗时 ${timeUsed.toFixed(1)}s</span>` : ''}
                 </div>

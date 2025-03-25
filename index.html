@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Biegu v2.1 By deepseek&wzc</title>
+    <title>Biegu v2.3 By deepseek&wzc</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
     <style>
         body {
@@ -20,23 +20,60 @@
             margin: 15px 0;
             padding: 10px;
             border-radius: 5px;
+            transition: all 0.3s;
         }
 
-        .correct {
-            background: #e8f5e9;
-        }
-        .gold {
-            background: #FAFA99;
-        }
+        
+    .gold {
+        background: linear-gradient(90deg, #FFD700 30%, #ffec8a 50%, #FFD700 70%);
+        background-size: 200% 200%;
+        animation: shine 2.5s linear infinite;
+        color: #ffffff; /* 初始白色保证可读性 */
+        border: 1px solid #FFD700;
+        position: relative;
+    }
 
-        .wrong {
-            background: #ffebee;
+    /* 优化后的彩虹文字动画 */
+    @keyframes text-color {
+        0%   { color: #FF3366; }  /* 亮粉色 */
+        20%  { color: #9C27B0; }  /* 紫色 */
+        40%  { color: #2196F3; }  /* 亮蓝色 */
+        60%  { color: #00BCD4; }  /* 青蓝色 */
+        80%  { color: #FF5722; }  /* 橙红色 */
+        100% { color: #FF3366; }  /* 循环回亮粉色 */
+    }
+
+    .gold * {
+        animation: text-color 1.2s linear infinite;
+    }
+
+    /* 保留原有背景动画 */
+    @keyframes shine {
+        0% { background-position: 100% 50%; }
+        100% { background-position: -100% 50%; }
+    }
+
+        .correct { 
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+        .close { 
+            background: #E3F2FD;
+            color: #1565C0;
+        }
+        .wrong { 
+            background: #FFEBEE;
+            color: #C62828;
+        }
+        .completely-wrong { 
+            background: #000000;
+            color: #FFFFFF;
         }
 
         .problem {
             font-weight: bold;
             margin: 5px 0;
-            color: #333;
+            color: inherit;
         }
 
         .answer-line {
@@ -75,7 +112,7 @@
 </head>
 
 <body>
-    <h1>Biegu v2.1</h1>
+    <h1>Biegu v2.3</h1>
     <div class="input-group">
         <input type="text" id="seed" placeholder="输入种子">
         <button onclick="startTest()">开始</button>
@@ -85,73 +122,78 @@
     <div id="ranking"></div>
 
     <script>
-        // 初始化排行榜
         function showRanking() {
             const list = JSON.parse(localStorage.getItem('ranking') || '[]');
             let html = '<h3>🏆 排行榜</h3><ol>';
             list.slice(0, 10).forEach(item => {
-                html += `<li>${item.name} - ${item.score.toFixed(2)}分 (${item.time}s)</li>`;
+                const dt = new Date(item.date);
+                const dateStr = `${dt.getFullYear().toString().slice(-2)}/${(dt.getMonth()+1).toString().padStart(2,'0')}/${dt.getDate().toString().padStart(2,'0')} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
+                html += `<li>[${dateStr}] ${item.name} - ${item.score.toFixed(2)}分 (${item.time}s)</li>`;
             });
             document.getElementById('ranking').innerHTML = html + '</ol>';
         }
         showRanking();
 
-        // 题目生成器（无需种子判断）
         function generateQuestion() {
+            const minVal = 100.001;
+            const maxVal = 1e10 - 1;
+            
+            const logMin = Math.log10(minVal);
+            const logMax = Math.log10(maxVal);
+            const targetLog = logMin + Math.random() * (logMax - logMin);
+            
             let a, b, ans;
             do {
-                const logRange = 1 - Math.log10(2);
-                const ansBase = Math.pow(10, Math.pow(10, Math.random() * logRange + Math.log10(2)));
-                a = Math.round((Math.random() * 8 + 2) * 100) / 100;
-                b = Math.round((Math.log(ansBase) / Math.log(a)) * 100) / 100;
-                ans = Math.round(Math.pow(a, b) * 1000) / 1000;
-            } while (isNaN(ans) || !isFinite(ans));
+                a = Math.random() * 8 + 2;
+                b = targetLog / Math.log10(a);
+                a = Math.round(a * 100) / 100;
+                b = Math.round(b * 100) / 100;
+                ans = Math.round(Math.pow(a, b) * 10) / 10; // 精确保留一位小数
+            } while (b < 1 || ans <= 100 || ans >= 1e10);            
             return { a, b, ans };
         }
 
-        // 评分系统
         function calculateScore(input, answer) {
             const accuracy = Math.max(0, 1 - Math.abs(input / answer - 1));
+            const intStr = Math.floor(answer).toString();
             let multiplier = 1;
-            const absAnswer = Math.abs(answer);
-
-            if (absAnswer >= 1e9) multiplier = 1.05;
-            else if (absAnswer >= 1e8) multiplier = 1.04;
-            else if (absAnswer >= 1e7) multiplier = 1.03;
-            else if (absAnswer >= 1e6) multiplier = 1.02;
-            else if (absAnswer >= 1e4) multiplier = 1.01;
+            if (intStr.length >= 9) multiplier = 1.03;
+            else if (intStr.length >= 7) multiplier = 1.02;
+            else if (intStr.length >= 3) multiplier = 1.01;
             return Math.min(Math.max(accuracy * multiplier, 0.5), 1);
         }
 
-        // 测试控制变量
         let testStartTime, totalQuestions = [], currentQuestion = 0, totalScore = 0, timeLimit, timerId;
 
         async function startTest() {
             let seedInput = document.getElementById('seed').value.trim();
             document.querySelector('.input-group').style.display = 'none';
             document.getElementById('questions').innerHTML = '';
-            var seedInput2=seedInput;
-            // 种子处理逻辑
-            if (seedInput === "" || seedInput.toLowerCase() === "test") {
-                // 生成8位随机种子并更新输入框
-                seedInput = Math.random().toString(36).substring(2, 10);
+
+            const isTestModeRequested = seedInput.toLowerCase().startsWith('test');
+            if (!seedInput) {
+                seedInput = isTestModeRequested ? 
+                    `test${Math.random().toString(36).substring(2, 10)}` : 
+                    Math.random().toString(36).substring(2, 10);
                 document.getElementById('seed').value = seedInput;
             }
 
-            // 设置全局种子
             Math.seedrandom(seedInput);
 
-            if (seedInput2.startsWith('test')) {
-                // 测试模式
+            const isTestMode = seedInput.startsWith('test');
+            
+            if (isTestMode) {
                 totalQuestions = Array.from({ length: 10 }, generateQuestion);
-                timeLimit = totalQuestions.reduce((sum, q) => sum + 7 * (Math.floor(Math.log10(q.ans)) + 1), 0);
+                timeLimit = totalQuestions.reduce((sum, q) => {
+                    const digits = Math.floor(Math.log10(q.ans)) + 1;
+                    return sum + 7 * digits;
+                }, 0);
                 testStartTime = Date.now();
                 currentQuestion = 0;
                 totalScore = 0;
                 updateTimer();
                 askNextQuestion();
             } else {
-                // 练习模式
                 let practiceCount = 0;
                 while (true) {
                     practiceCount++;
@@ -189,7 +231,7 @@
             clearInterval(timerId);
 
             const timeUsed = (Date.now() - startTime) / 1000;
-            const score = calculateScore(userAns, q.ans) ** 2;
+            const score = Math.pow(calculateScore(userAns, q.ans), 2);
             totalScore += score;
 
             showFeedback(q, userAns, score, timeUsed, currentQuestion + 1);
@@ -223,16 +265,24 @@
 
         function showFeedback(q, userAns, score, timeUsed, questionNum) {
             const accuracy = Math.max(0, 1 - Math.abs(userAns / q.ans - 1));
+            let className = '';
+            
+            if (accuracy >= 0.99) className = 'gold';
+            else if (accuracy >= 0.9) className = 'correct';
+            else if (accuracy >= 0.8) className = 'close';
+            else if (accuracy >= 0.5) className = 'wrong';
+            else className = 'completely-wrong';
+
             const div = document.createElement('div');
-            div.className = `question ${accuracy>=0.99 ? 'gold' : (accuracy >= 0.9 ? 'correct' : 'wrong')}`;
+            div.className = `question ${className}`;
 
             div.innerHTML = `
                 <div class="answer-line">
                     <span class="problem">${questionNum}. ${q.a.toFixed(2)}<sup>${q.b.toFixed(2)}</sup>=${userAns}</span>
-                    <span>答案：${q.ans.toFixed(3)}</span>
-                    <span style="color:${accuracy>=0.99 ? '#1f1e33' : (accuracy >= 0.9 ? '#2e7d32' : '#c62828')}">准确率：${(accuracy * 100).toFixed(1)}%</span>
+                    <span>答案：${q.ans.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, "")}</span>
+                    <span style="color:inherit">准确率：${(accuracy * 100).toFixed(1)}%</span>
                     ${score ? `<span>得分：${score.toFixed(3)}</span>` : ''}
-                    ${timeUsed ? `<span style="color:#666">耗时 ${timeUsed.toFixed(1)}s</span>` : ''}
+                    ${timeUsed ? `<span style="color:inherit">耗时 ${timeUsed.toFixed(1)}s</span>` : ''}
                 </div>
             `;
 
@@ -243,7 +293,7 @@
             const totalTime = ((Date.now() - testStartTime) / 1000).toFixed(1);
             const finalScore = (totalScore * 10).toFixed(2);
 
-            const name = prompt(`🏁 测试完成！\n得分：${finalScore}\n用时：${totalTime}秒\n请输入昵称：`);
+            const name = prompt(`🏁\n得分：${finalScore}\n用时：${totalTime}秒\n请输入昵称：`);
             if (name) {
                 const record = {
                     date: new Date().toISOString(),
@@ -261,5 +311,4 @@
         }
     </script>
 </body>
-
 </html>

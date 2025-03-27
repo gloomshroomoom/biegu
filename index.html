@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Biegu v2.3 By deepseek&wzc</title>
+    <title>Biegu v2.4 By deepseek&wzc</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
     <style>
         body {
@@ -23,35 +23,32 @@
             transition: all 0.3s;
         }
 
-        
-    .gold {
-        background: linear-gradient(90deg, #FFD700 30%, #ffec8a 50%, #FFD700 70%);
-        background-size: 200% 200%;
-        animation: shine 2.5s linear infinite;
-        color: #ffffff; /* 初始白色保证可读性 */
-        border: 1px solid #FFD700;
-        position: relative;
-    }
+        .gold {
+            background: linear-gradient(90deg, #FFD700 30%, #ffec8a 50%, #FFD700 70%);
+            background-size: 200% 200%;
+            animation: shine 2.5s linear infinite;
+            color: #ffffff;
+            border: 1px solid #FFD700;
+            position: relative;
+        }
 
-    /* 优化后的彩虹文字动画 */
-    @keyframes text-color {
-        0%   { color: #FF3366; }  /* 亮粉色 */
-        20%  { color: #9C27B0; }  /* 紫色 */
-        40%  { color: #2196F3; }  /* 亮蓝色 */
-        60%  { color: #00BCD4; }  /* 青蓝色 */
-        80%  { color: #FF5722; }  /* 橙红色 */
-        100% { color: #FF3366; }  /* 循环回亮粉色 */
-    }
+        @keyframes text-color {
+            0%   { color: #FF3366; }
+            20%  { color: #9C27B0; }
+            40%  { color: #2196F3; }
+            60%  { color: #00BCD4; }
+            80%  { color: #FF5722; }
+            100% { color: #FF3366; }
+        }
 
-    .gold * {
-        animation: text-color 1.2s linear infinite;
-    }
+        .gold * {
+            animation: text-color 1.2s linear infinite;
+        }
 
-    /* 保留原有背景动画 */
-    @keyframes shine {
-        0% { background-position: 100% 50%; }
-        100% { background-position: -100% 50%; }
-    }
+        @keyframes shine {
+            0% { background-position: 100% 50%; }
+            100% { background-position: -100% 50%; }
+        }
 
         .correct { 
             background: #E8F5E9;
@@ -112,7 +109,7 @@
 </head>
 
 <body>
-    <h1>Biegu v2.3</h1>
+    <h1>Biegu v2.4</h1>
     <div class="input-group">
         <input type="text" id="seed" placeholder="输入种子">
         <button onclick="startTest()">开始</button>
@@ -124,7 +121,7 @@
     <script>
         function showRanking() {
             const list = JSON.parse(localStorage.getItem('ranking') || '[]');
-            let html = '<h3>🏆 排行榜</h3><ol>';
+            let html = '<h3>🏆 排行榜（挂哥我会帮你删记录的）</h3><ol>';
             list.slice(0, 10).forEach(item => {
                 const dt = new Date(item.date);
                 const dateStr = `${dt.getFullYear().toString().slice(-2)}/${(dt.getMonth()+1).toString().padStart(2,'0')}/${dt.getDate().toString().padStart(2,'0')} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
@@ -134,52 +131,39 @@
         }
         showRanking();
 
-        function generateQuestion() {
-            const minVal = 100.001;
-            const maxVal = 1e10 - 1;
-            
-            const logMin = Math.log10(minVal);
-            const logMax = Math.log10(maxVal);
-            const targetLog = logMin + Math.random() * (logMax - logMin);
-            
-            let a, b, ans;
-            do {
-                a = Math.random() * 8 + 2;
-                b = targetLog / Math.log10(a);
-                a = Math.round(a * 100) / 100;
-                b = Math.round(b * 100) / 100;
-                ans = Math.round(Math.pow(a, b) * 10) / 10; // 精确保留一位小数
-            } while (b < 1 || ans <= 100 || ans >= 1e10);            
-            return { a, b, ans };
-        }
-
-        function calculateScore(input, answer) {
-            const accuracy = Math.max(0, 1 - Math.abs(input / answer - 1));
-            const intStr = Math.floor(answer).toString();
-            let multiplier = 1;
-            if (intStr.length >= 9) multiplier = 1.03;
-            else if (intStr.length >= 7) multiplier = 1.02;
-            else if (intStr.length >= 3) multiplier = 1.01;
-            return Math.min(Math.max(accuracy * multiplier, 0.5), 1);
-        }
-
-        let testStartTime, totalQuestions = [], currentQuestion = 0, totalScore = 0, timeLimit, timerId;
-
         async function startTest() {
-            let seedInput = document.getElementById('seed').value.trim();
+            var seedInput = document.getElementById('seed').value.trim();
+            
+            // 管理员删除功能
+            if(seedInput.startsWith('delete')) {
+                const index = parseInt(seedInput.substring(6));
+                if(!isNaN(index)) {
+                    const list = JSON.parse(localStorage.getItem('ranking')) || [];
+                    if(index >= 1 && index <= list.length) {
+                        list.splice(index-1, 1);
+                        localStorage.setItem('ranking', JSON.stringify(list));
+                        alert(`已删除第 ${index} 条记录`);
+                        document.getElementById('seed').value = '';
+                        showRanking();
+                        return;
+                    }
+                }
+                alert('无效指令');
+                return;
+            }
+
+            // 原始游戏逻辑
             document.querySelector('.input-group').style.display = 'none';
             document.getElementById('questions').innerHTML = '';
 
-            const isTestModeRequested = seedInput.toLowerCase().startsWith('test');
             if (!seedInput || document.getElementById('seed').value=="test") {
-                seedInput = isTestModeRequested ? 
+                seedInput = seedInput.toLowerCase().startsWith('test') ? 
                     `test${Math.random().toString(36).substring(2, 10)}` : 
                     Math.random().toString(36).substring(2, 10);
                 document.getElementById('seed').value = seedInput;
             }
 
             Math.seedrandom(seedInput);
-
             const isTestMode = seedInput.startsWith('test');
             
             if (isTestMode) {
@@ -203,6 +187,34 @@
                 }
             }
         }
+
+        function generateQuestion() {
+            const logMin = Math.log10(2);
+            const logMax = 1;
+            const targetLog = Math.pow(10,logMin + Math.random() * (logMax - logMin));
+            
+            let a, b, ans;
+            do {
+                a = Math.random() * 8 + 2;
+                b = targetLog / Math.log10(a);
+                a = Math.round(a * 100) / 100;
+                b = Math.round(b * 100) / 100;
+                ans = Math.round(Math.pow(a, b) * 10) / 10;
+            } while (b<1 || ans <= 100 || ans >= 1e10);            
+            return { a, b, ans };
+        }
+
+        function calculateScore(input, answer) {
+            const accuracy = Math.max(0, 1 - Math.abs(input / answer - 1));
+            const intStr = Math.floor(answer).toString();
+            let multiplier = 1;
+            if (intStr.length >= 9) multiplier = 1.03;
+            else if (intStr.length >= 7) multiplier = 1.02;
+            else if (intStr.length >= 3) multiplier = 1.01;
+            return Math.min(Math.max(accuracy * multiplier, 0.5), 1);
+        }
+
+        let testStartTime, totalQuestions = [], currentQuestion = 0, totalScore = 0, timeLimit, timerId;
 
         function updateTimer() {
             const elapsed = Math.floor((Date.now() - testStartTime) / 1000);
@@ -293,7 +305,7 @@
             const totalTime = ((Date.now() - testStartTime) / 1000).toFixed(1);
             const finalScore = (totalScore * 10).toFixed(2);
 
-            const name = prompt(`🏁\n得分：${finalScore}\n用时：${totalTime}秒\n请输入昵称：`);
+            const name = prompt(`🏁时间到！\n得分：${finalScore}\n用时：${totalTime}秒\n请输入昵称：`);
             if (name) {
                 const record = {
                     date: new Date().toISOString(),

@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Biegu v2.4 By deepseek&wzc</title>
+    <title>Biegu v2709</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
     <style>
         body {
@@ -109,7 +109,7 @@
 </head>
 
 <body>
-    <h1>Biegu v2.4</h1>
+    <h1>Biegu 2709</h1>
     <div class="input-group">
         <input type="text" id="seed" placeholder="输入种子">
         <button onclick="startTest()">开始</button>
@@ -121,7 +121,7 @@
     <script>
         function showRanking() {
             const list = JSON.parse(localStorage.getItem('ranking') || '[]');
-            let html = '<h3>🏆 排行榜（挂哥我会帮你删记录的）</h3><ol>';
+            let html = '<h3>🏆 排行榜</h3><ol>';
             list.slice(0, 10).forEach(item => {
                 const dt = new Date(item.date);
                 const dateStr = `${dt.getFullYear().toString().slice(-2)}/${(dt.getMonth()+1).toString().padStart(2,'0')}/${dt.getDate().toString().padStart(2,'0')} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
